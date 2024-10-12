@@ -8,4 +8,12 @@ public class ezNote
     int pitch;
     // Velocity 0-127 (int)
     int velocity;
+
+    fun ezNote(float o, float b, float p, float v)
+    {
+        o => onset;
+        b => beats;
+        p => pitch;
+        v => velocity;
+    }
 }
