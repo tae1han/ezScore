@@ -1,79 +1,79 @@
-// Hid trak;
-// HidMsg trak_msg;
+Hid trak;
+HidMsg trak_msg;
 
-// // which keyboard
-// 0 => int trak_device;
+// which keyboard
+0 => int trak_device;
 
-// // z axis deadzone
-// 0.007 => float DEADZONE;
+// z axis deadzone
+0.007 => float DEADZONE;
 
-// // open joystick 0, exit on fail
-// if( !trak.openJoystick( trak_device ) ) me.exit();
+// open joystick 0, exit on fail
+if( !trak.openJoystick( trak_device ) ) me.exit();
 
-// // print
-// <<< "joystick '" + trak.name() + "' ready", "" >>>;
+// print
+<<< "joystick '" + trak.name() + "' ready", "" >>>;
 
-// // data structure for gametrak
-// class GameTrak
-// {
-//     // timestamps
-//     time lastTime;
-//     time currTime;
+// data structure for gametrak
+class GameTrak
+{
+    // timestamps
+    time lastTime;
+    time currTime;
     
-//     // previous axis data
-//     float lastAxis[6];
-//     // current axis data
-//     float axis[6];
-// }
+    // previous axis data
+    float lastAxis[6];
+    // current axis data
+    float axis[6];
+}
 
-// // gametrack
-// GameTrak gt;
+// gametrack
+GameTrak gt;
 
-// // spork control
-// spork ~ gametrak();
+// spork control
+spork ~ gametrak();
 
-// // gametrack handling
-// fun void gametrak()
-// {
-//     while( true )
-//     {
-//         // wait on HidIn as event
-//         trak => now;
+// gametrack handling
+fun void gametrak()
+{
+    while( true )
+    {
+        // wait on HidIn as event
+        trak => now;
         
-//         // messages received
-//         while( trak.recv( trak_msg ) )
-//         {
-//             // <<< "axes:", gt.axis[0],gt.axis[1],gt.axis[2], gt.axis[3],gt.axis[4],gt.axis[5]>>>;
-//             // joystick axis motion
-//             if( trak_msg.isAxisMotion() )
-//             {
-//                 // check which
-//                 if( trak_msg.which >= 0 && trak_msg.which < 6 )
-//                 {
-//                     // check if fresh
-//                     if( now > gt.currTime )
-//                     {
-//                         // time stamp
-//                         gt.currTime => gt.lastTime;
-//                         // set
-//                         now => gt.currTime;
-//                     }
-//                     // save last
-//                     gt.axis[trak_msg.which] => gt.lastAxis[trak_msg.which];
-//                     // the z axes map to [0,1], others map to [-1,1]
-//                     if( trak_msg.which != 2 && trak_msg.which != 5 )
-//                     { trak_msg.axisPosition => gt.axis[trak_msg.which]; }
-//                     else
-//                     {
-//                         1 - ((trak_msg.axisPosition + 1) / 2) - DEADZONE => gt.axis[trak_msg.which];
-//                         if( gt.axis[trak_msg.which] < 0 ) 0 => gt.axis[trak_msg.which];
-//                     }
-//                 }
-//             }
+        // messages received
+        while( trak.recv( trak_msg ) )
+        {
+            // <<< "axes:", gt.axis[0],gt.axis[1],gt.axis[2], gt.axis[3],gt.axis[4],gt.axis[5]>>>;
+            // joystick axis motion
+            if( trak_msg.isAxisMotion() )
+            {
+                // check which
+                if( trak_msg.which >= 0 && trak_msg.which < 6 )
+                {
+                    // check if fresh
+                    if( now > gt.currTime )
+                    {
+                        // time stamp
+                        gt.currTime => gt.lastTime;
+                        // set
+                        now => gt.currTime;
+                    }
+                    // save last
+                    gt.axis[trak_msg.which] => gt.lastAxis[trak_msg.which];
+                    // the z axes map to [0,1], others map to [-1,1]
+                    if( trak_msg.which != 2 && trak_msg.which != 5 )
+                    { trak_msg.axisPosition => gt.axis[trak_msg.which]; }
+                    else
+                    {
+                        1 - ((trak_msg.axisPosition + 1) / 2) - DEADZONE => gt.axis[trak_msg.which];
+                        if( gt.axis[trak_msg.which] < 0 ) 0 => gt.axis[trak_msg.which];
+                    }
+                }
+            }
 
-//         }
-//     }
-// }
+        }
+    }
+}
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -85,36 +85,66 @@ score.importMIDI("sonata01-1.mid");
 
 ScorePlayer sp(score);
 
-spork~sp.tickDriver();
-spork~part1();
+Voice part1;
+part1.init();
 // spork~part2();
 
-fun void part1()
+class Voice
 {
+    fun init()
+    {
+        spork~noteEventListener();
+    }
+
     8 => int n_voices;
-    SinOsc osc[n_voices]; 
-    ADSR env[n_voices]; 
+    SinOsc oscs[n_voices]; 
+    ADSR envs[n_voices]; 
     Gain g => NRev rev => dac;
     g.gain(.8);
     rev.mix(.05);
     for(int i; i < n_voices; i++)
     {
-        osc[i] => env[i] => g;
-        osc[i].gain(1.0);
-        env[i].set(50::ms, 800::ms, 0.0, 100::ms);
+        oscs[i] => envs[i] => g;
+        // oscs[i] => g;
+        // oscs[i].gain(0.0);
+        envs[i].set(50::ms, 5000::ms, 0.0, 100::ms);
     }
 
-    while(true)
+
+    fun noteEventListener()
     {
-        sp.nextNotes[1] => now;
-        <<< "Playing", sp.nextNotes[1].notes.size(), "note(s) at", sp.playhead >>>;
-        sp.nextNotes[1].notes @=> ezNote currentNotes[];
-        for(int i; i < currentNotes.size(); i++)
+        while(true)
         {
-            Std.mtof(currentNotes[i].pitch) => osc[i].freq;
-            env[i].keyOn();
+            sp.nextNotes[1] => now;
+            <<< "Playing", sp.nextNotes[1].notes.size(), "note(s) at", sp.playhead >>>;
+            sp.nextNotes[1].notes @=> ezNote currentNotes[];
+            for(int i; i < currentNotes.size(); i++)
+            {   
+                spork~playNote(i, currentNotes[i]);
+            }
         }
     }
+
+    fun playNote(int which, ezNote theNote)
+    {
+        Std.mtof(theNote.pitch) => oscs[which].freq;
+        sp.playhead/ms => float onset_ms;
+        60000 / sp.score.bpm => float ms_per_beat;
+        theNote.beats * ms_per_beat => float duration_ms;
+        Math.sgn(sp.rate) => float direction;
+        duration_ms*direction + onset_ms => float offset_ms;
+
+        while(sp.playhead/ms < offset_ms)
+        {
+            // 1.0 => oscs[which].gain;
+            envs[which].keyOn();
+            sp.tick => now;
+        }
+        // 0.0 => oscs[which].gain;
+        envs[which].keyOff();
+
+    }
+
 }
 
 fun void part2()
@@ -145,16 +175,16 @@ fun void part2()
     }
 }
 
-// fun void changeRate()
-// {
-//     while(true)
-//     {
-//         gt.axis[3]*2.0 => sp.rate;
-//         1::second => now;
-//     }
-// }
+fun void changeRate()
+{
+    while(true)
+    {
+        gt.axis[3]+1.0 => sp.rate;
+        1::second => now;
+    }
+}
 
-//spork~changeRate();
+spork~changeRate();
 
 while(true)
 {

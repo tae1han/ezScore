@@ -19,24 +19,20 @@ public class ScorePlayer
             cherr <= "part " <= i <= " has " <= parts[i].measures[0].notes.size() <= " notes" <= IO.newline();
         }
         new NoteEvent[parts.size()] @=> nextNotes;
-    }
-
-    fun void update()
-    {
-        tick * rate => tatum;
-        tatum +=> playhead;
-        // getNotesAtPlayhead(1);
-        for(int i; i < parts.size(); i++)
-        {
-            getNotesAtPlayhead(i);
-        }
+        spork~tickDriver();
     }
 
     fun void tickDriver()
     {
         while(true)
         {
-            update();
+            tick * rate => tatum;
+            tatum +=> playhead;
+            // getNotesAtPlayhead(1);
+            for(int i; i < parts.size(); i++)
+            {
+                getNotesAtPlayhead(i);
+            }
             tick => now;
         }
     }
