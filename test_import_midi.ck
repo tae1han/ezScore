@@ -1,8 +1,3 @@
-// Machine.add("ezNote.ck");
-// Machine.add("ezMeasure.ck");
-// Machine.add("ezPart.ck");
-// Machine.add("ezscore2.ck");
-
 ezScore score;
 score.importMIDI("bwv772.mid");
 <<< score.parts.size() >>>;
