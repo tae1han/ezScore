@@ -1,4 +1,4 @@
 public class ezMeasure
 {
-    ezNote notes[];
+    ezNote notes[0];
 }

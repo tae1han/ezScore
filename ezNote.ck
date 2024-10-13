@@ -9,7 +9,7 @@ public class ezNote
     // Velocity 0-127 (int)
     int velocity;
 
-    fun ezNote(float o, float b, float p, float v)
+    fun ezNote(float o, float b, int p, int v)
     {
         o => onset;
         b => beats;

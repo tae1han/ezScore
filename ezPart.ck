@@ -1,4 +1,4 @@
 public class ezPart
 {
-    ezMeasure measures[];
+    ezMeasure measures[0];
 }
