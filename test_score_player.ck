@@ -1,3 +1,45 @@
+Hid kb;
+HidMsg kb_msg;
+
+// which keyboard
+3 => int device;
+// get from command line
+if( me.args() ) me.arg(0) => Std.atoi => device;
+
+// open keyboard (get device number from command line)
+if( !kb.openKeyboard( device ) ) me.exit();
+<<< "keyboard '" + kb.name() + "' ready", "" >>>;
+
+// infinite event loop
+fun void kb_listener()
+{
+    while( true )
+    {
+        // wait on event
+        kb => now;
+
+        // get one or more messages
+        while( kb.recv( kb_msg ) )
+        {
+            // check for action type
+            if( kb_msg.isButtonDown() )
+            {
+                <<< "down:", kb_msg.which, "(code)", kb_msg.key, "(usb key)", kb_msg.ascii, "(ascii)" >>>;
+                kb_set_playhead(kb_msg.which);
+            }
+            
+            else
+            {
+                //<<< "up:", msg.which, "(code)", msg.key, "(usb key)", msg.ascii, "(ascii)" >>>;
+            }
+        }
+    }
+}
+spork ~ kb_listener();
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 Hid trak;
 HidMsg trak_msg;
 
@@ -86,14 +128,15 @@ score.importMIDI("sonata01-1.mid");
 ScorePlayer sp(score);
 
 Voice part1;
-part1.init();
+// part1.init();
 // spork~part2();
 
 class Voice
 {
-    fun init()
+    fun Voice()
     {
         spork~noteEventListener();
+        // spork~envPrint();
     }
 
     8 => int n_voices;
@@ -105,18 +148,14 @@ class Voice
     for(int i; i < n_voices; i++)
     {
         oscs[i] => envs[i] => g;
-        // oscs[i] => g;
-        // oscs[i].gain(0.0);
-        envs[i].set(50::ms, 5000::ms, 0.0, 100::ms);
+        envs[i].set(20::ms, 7000::ms, 0.0, 120::ms);
     }
-
 
     fun noteEventListener()
     {
         while(true)
         {
             sp.nextNotes[1] => now;
-            <<< "Playing", sp.nextNotes[1].notes.size(), "note(s) at", sp.playhead >>>;
             sp.nextNotes[1].notes @=> ezNote currentNotes[];
             for(int i; i < currentNotes.size(); i++)
             {   
@@ -128,23 +167,43 @@ class Voice
     fun playNote(int which, ezNote theNote)
     {
         Std.mtof(theNote.pitch) => oscs[which].freq;
+
         sp.playhead/ms => float onset_ms;
         60000 / sp.score.bpm => float ms_per_beat;
         theNote.beats * ms_per_beat => float duration_ms;
         Math.sgn(sp.rate) => float direction;
         duration_ms*direction + onset_ms => float offset_ms;
 
-        while(sp.playhead/ms < offset_ms)
+        while((sp.playhead/ms - onset_ms)*direction < duration_ms)
         {
-            // 1.0 => oscs[which].gain;
             envs[which].keyOn();
             sp.tick => now;
         }
-        // 0.0 => oscs[which].gain;
         envs[which].keyOff();
-
     }
 
+    fun flushNotes()
+    {
+        for(int i; i < n_voices; i++)
+        {
+            envs[i].keyOff();
+            0.0 => envs[i].value;
+            cherr <= "voice " <= i <= " envelope value: " <= envs[i].value() <= IO.newline();
+            cherr <= "voice " <= i <= " envelope target: " <= envs[i].target() <= IO.newline();
+        }
+    }
+
+    fun void envPrint()
+    {
+        while(true)
+        {
+            for(int i; i < n_voices; i++)
+            {
+                cherr <= "voice " <= i <= " envelope value: " <= envs[i].value() <= IO.newline();
+            }
+            10::ms => now;
+        }
+    }
 }
 
 fun void part2()
@@ -165,7 +224,7 @@ fun void part2()
     while(true)
     {
         sp.nextNotes[2] => now;
-        <<< "Playing", sp.nextNotes[2].notes.size(), "note(s) at", sp.playhead >>>;
+        //<<< "Playing", sp.nextNotes[2].notes.size(), "note(s) at", sp.playhead >>>;
         sp.nextNotes[2].notes @=> ezNote currentNotes[];
         for(int i; i < currentNotes.size(); i++)
         {
@@ -175,11 +234,25 @@ fun void part2()
     }
 }
 
+fun void kb_set_playhead(int which)
+{
+    if (which == 39) 
+    {
+        part1.flushNotes();
+        for(int i; i < part1.n_voices; i++)
+        {
+            part1.envs[i].keyOff();
+        }
+        sp.pos(0.0);
+    }
+
+}
+
 fun void changeRate()
 {
     while(true)
     {
-        gt.axis[3]+1.0 => sp.rate;
+        gt.axis[3]*1.5 => sp.rate;
         1::second => now;
     }
 }

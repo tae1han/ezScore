@@ -4,10 +4,13 @@ public class ScorePlayer
     ezPart parts[];
     NoteEvent nextNotes[];
 
+    Chugraph graphs[];
+
     1 => float rate;
     1::ms => dur tick;
     dur tatum;
     dur playhead;
+
 
     fun ScorePlayer(ezScore s)
     {
@@ -78,8 +81,31 @@ public class ScorePlayer
         {
             // <<< "playing", currentNotes.size(), "note(s) at time", playhead/ms >>>;
             currentNotes @=> nextNotes[partIndex].notes;
+            for(int i; i < currentNotes.size(); i++)
+            {
+                spork ~playNoteWrapper(partIndex, i, currentNotes[i]);
+            }
+
             nextNotes[partIndex].broadcast();
         }
+    }
+
+    fun void playNoteWrapper(int partIndex, int whichNote, ezNote theNote)
+    {
+        graphs[partIndex].noteOn(whichNote, theNote);
+
+        playhead/ms => float onset_ms;
+        60000 / score.bpm => float ms_per_beat;
+        theNote.beats * ms_per_beat => float duration_ms;
+        Math.sgn(rate) => float direction;
+
+        while((playhead/ms - onset_ms)*direction < duration_ms)
+        {
+            tick => now;
+        }
+
+        graphs[partIndex].noteOff(whichNote);
+
     }
 }
 
