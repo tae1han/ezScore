@@ -1,6 +1,6 @@
 @import "ezNote.ck";
 
-public class ezVoice extends Chugraph
+public class ezVoice
 {
     // define sound chain
     int n_voices;
