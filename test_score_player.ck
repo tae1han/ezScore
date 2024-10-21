@@ -245,7 +245,6 @@ fun void kb_set_playhead(int which)
         }
         sp.pos(0.0);
     }
-
 }
 
 fun void changeRate()

@@ -4,10 +4,13 @@ public class ScorePlayer
     ezPart parts[];
     NoteEvent nextNotes[];
 
+    ezVoice graphs[];
+
     1 => float rate;
     1::ms => dur tick;
     dur tatum;
     dur playhead;
+
 
     fun ScorePlayer(ezScore s)
     {
@@ -19,6 +22,7 @@ public class ScorePlayer
             cherr <= "part " <= i <= " has " <= parts[i].measures[0].notes.size() <= " notes" <= IO.newline();
         }
         new NoteEvent[parts.size()] @=> nextNotes;
+        new ezVoice[parts.size()] @=> graphs;
         spork~tickDriver();
     }
 
@@ -29,7 +33,6 @@ public class ScorePlayer
             tick * rate => tatum;
             tatum +=> playhead;
             // <<< playhead/ms >>>;
-            // getNotesAtPlayhead(1);
             for(int i; i < parts.size(); i++)
             {
                 getNotesAtPlayhead(i);
@@ -40,13 +43,26 @@ public class ScorePlayer
 
     fun void pos(dur timePosition)
     {
+        flushNotes();
         timePosition => playhead;
     }
 
     fun void pos(float beatPosition)
     {
+        flushNotes();
         60000 / score.bpm => float ms_per_beat;
         (beatPosition * ms_per_beat)::ms => playhead;
+    }
+
+    fun void flushNotes()
+    {
+        for(int i; i < parts.size(); i++)
+        {
+            for(int j; j < graphs[i].n_voices; j++)
+            {
+                graphs[i].noteOff(j);
+            }
+        }
     }
 
     fun void getNotesAtPlayhead(int partIndex)
@@ -78,8 +94,29 @@ public class ScorePlayer
         {
             // <<< "playing", currentNotes.size(), "note(s) at time", playhead/ms >>>;
             currentNotes @=> nextNotes[partIndex].notes;
-            nextNotes[partIndex].broadcast();
+            for(int i; i < currentNotes.size(); i++)
+            {
+                spork ~playNoteWrapper(partIndex, i, currentNotes[i]);
+            }
+            //nextNotes[partIndex].broadcast();
         }
+    }
+
+    fun void playNoteWrapper(int partIndex, int whichNote, ezNote theNote)
+    {
+        graphs[partIndex].noteOn(whichNote, theNote);
+
+        playhead/ms => float onset_ms;
+        60000 / score.bpm => float ms_per_beat;
+        theNote.beats * ms_per_beat => float duration_ms;
+        Math.sgn(rate) => float direction;
+
+        while((playhead/ms - onset_ms)*direction < duration_ms) 
+        {
+            tick => now;
+        }
+
+        graphs[partIndex].noteOff(whichNote);
     }
 }
 
