@@ -1,3 +1,5 @@
+@import "ezVoice.ck"
+
 public class MyVoice extends ezVoice
 {
     // define sound chain

@@ -24,7 +24,7 @@ fun void kb_listener()
             // check for action type
             if( kb_msg.isButtonDown() )
             {
-                <<< "down:", kb_msg.which, "(code)", kb_msg.key, "(usb key)", kb_msg.ascii, "(ascii)" >>>;
+                // <<< "down:", kb_msg.which, "(code)", kb_msg.key, "(usb key)", kb_msg.ascii, "(ascii)" >>>;
                 kb_set_playhead(kb_msg.which);
                 kb_set_rate(kb_msg.which);
             }
@@ -39,7 +39,7 @@ fun void kb_listener()
 spork ~ kb_listener();
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
+@import {"ezScore.ck", "ScorePlayer.ck", "MyVoice.ck"}
 
 ezScore score;
 score.setTempo(128);
@@ -64,12 +64,12 @@ fun void kb_set_playhead(int which)
 
 fun void kb_set_rate(int which)
 {
-    if(which == 80)
+    if(which == 29)
     {
         .1 -=> sp.rate;
         <<<"rate:", sp.rate>>>;
     }
-    if(which == 79)
+    if(which == 27)
     {
         .1 +=> sp.rate;
         <<<"rate:", sp.rate>>>;

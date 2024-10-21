@@ -1,3 +1,5 @@
+@import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck", "ezScore.ck", "NoteEvent.ck", "ezVoice.ck"}
+
 public class ScorePlayer
 {
     ezScore score;
@@ -44,12 +46,14 @@ public class ScorePlayer
     fun void pos(dur timePosition)
     {
         flushNotes();
+        <<<"moving playhead to position (ms):", timePosition/ms>>>;
         timePosition => playhead;
     }
 
     fun void pos(float beatPosition)
     {
         flushNotes();
+        <<<"moving playhead to position (beats):", beatPosition>>>;
         60000 / score.bpm => float ms_per_beat;
         (beatPosition * ms_per_beat)::ms => playhead;
     }

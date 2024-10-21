@@ -1,3 +1,5 @@
+@import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck"}
+
 public class ezScore
 {
     ezPart parts[0];

@@ -1,3 +1,5 @@
+@import "ezNote.ck";
+
 public class ezVoice extends Chugraph
 {
     // define sound chain

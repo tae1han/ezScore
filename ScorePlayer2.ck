@@ -1,3 +1,4 @@
+@import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck", "ezScore.ck", "NoteEvent.ck", "ezVoice.ck"}
 public class ScorePlayer
 {
     ezScore score;
