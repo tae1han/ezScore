@@ -1,18 +1,18 @@
 @import "ezNote.ck";
 
-public class ezVoice
+public class ezVoice extends Chugraph
 {
     // define sound chain
     int n_voices;
 
     fun void noteOn(int which, ezNote theNote)
     {
-        <<<"implement NoteOn function">>>;
+        // <<<"implement NoteOn function">>>;
     }
 
     fun void noteOff(int which)
     {
-        <<<"implement NoteOff function">>>;
+        // <<<"implement NoteOff function">>>;
     }
 
 }
