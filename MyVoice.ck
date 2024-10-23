@@ -12,13 +12,13 @@ public class MyVoice extends ezVoice
     for(int i; i < n_voices; i++)
     {
         oscs[i] => envs[i] => g;
-        envs[i].set(20::ms, 7000::ms, 0.0, 120::ms);
+        envs[i].set(4::ms, 7000::ms, 0.0, 200::ms);
     }
 
     fun void noteOn(int which, ezNote theNote)
     {
         Std.mtof(theNote.pitch) => oscs[which].freq;
-        theNote.velocity / 127.0 => oscs[which].gain;
+        (theNote.velocity / 127.0) => oscs[which].gain;
         envs[which].keyOn();
     }
 

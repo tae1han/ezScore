@@ -2,7 +2,7 @@ Hid kb;
 HidMsg kb_msg;
 
 // which keyboard
-3 => int device;
+1 => int device;
 // get from command line
 if( me.args() ) me.arg(0) => Std.atoi => device;
 
@@ -50,8 +50,8 @@ ScorePlayer sp(score);
 
 MyVoice v1;
 MyVoice v2;
-v1 @=> sp.graphs[1];
-v2 @=> sp.graphs[2];
+sp.setVoice(1, v1);     // set voice for part 1 to v1
+sp.setVoice(2, v2);
 
 fun void kb_set_playhead(int which)
 {

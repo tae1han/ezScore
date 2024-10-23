@@ -1,5 +1,7 @@
 @import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck", "ezScore.ck", "NoteEvent.ck", "ezVoice.ck"}
 
+
+
 public class ScorePlayer
 {
     ezScore score;
@@ -8,8 +10,13 @@ public class ScorePlayer
 
     ezVoice graphs[];
 
+    // "subvoice" - an individual ugen in the overall voice array a subvoice
+    int midi_to_subvoice[][];     // input is midi num, output is the index of which ugen is playing that note
+    int subvoice_in_use[][];      // 0 if subvoice is not in use (free), 1 if subvoice is in use
+
+
     1 => float rate;
-    1::ms => dur tick;
+    4::ms => dur tick;
     dur tatum;
     dur playhead;
 
@@ -26,10 +33,22 @@ public class ScorePlayer
         new NoteEvent[parts.size()] @=> nextNotes;
         new ezVoice[parts.size()] @=> graphs;
         spork~tickDriver();
+
+        // keep track of which subvoice we are using for each note
+        new int[parts.size()][128] @=> midi_to_subvoice;        // input is midi num, output is the index of which ugen is playing that note
+        for (int part; part < parts.size(); part++) {
+            for (int midi; midi < 128; midi++) {
+                -1 => midi_to_subvoice[part][midi];
+            }
+        }
+
+        // keep track of which subvoices are currently in use
+        new int[parts.size()][0] @=> subvoice_in_use;
     }
 
     fun void tickDriver()
     {
+        // 5::second => now;   // DELETE THIS
         while(true)
         {
             tick * rate => tatum;
@@ -45,9 +64,10 @@ public class ScorePlayer
 
     fun void pos(dur timePosition)
     {
-        flushNotes();
         <<<"moving playhead to position (ms):", timePosition/ms>>>;
         timePosition => playhead;
+        flushNotes();
+        
     }
 
     fun void pos(float beatPosition)
@@ -60,13 +80,28 @@ public class ScorePlayer
 
     fun void flushNotes()
     {
-        for(int i; i < parts.size(); i++)
+        for(int part; part < parts.size(); part++)
         {
-            for(int j; j < graphs[i].n_voices; j++)
+            for(int subvoice; subvoice < graphs[part].n_voices; subvoice++)
             {
-                graphs[i].noteOff(j);
+                graphs[part].noteOff(subvoice);
+            }
+
+            // reset whichNote indices to -1, so we know they are available for each note
+            for(int j; j < 128; j++) {
+                ezNote tempNote;
+                j => tempNote.pitch;
+                release_subvoice(part, tempNote);
             }
         }
+    }
+
+    fun void setVoice(int part, ezVoice voice)
+    {
+        voice @=> graphs[part];
+        
+        // keep track of which subvoices are currently in use
+        new int[voice.n_voices] @=> subvoice_in_use[part];
     }
 
     fun void getNotesAtPlayhead(int partIndex)
@@ -98,17 +133,19 @@ public class ScorePlayer
         {
             // <<< "playing", currentNotes.size(), "note(s) at time", playhead/ms >>>;
             currentNotes @=> nextNotes[partIndex].notes;
+            <<< "current notes size:", currentNotes.size()>>>;
             for(int i; i < currentNotes.size(); i++)
             {
-                spork ~playNoteWrapper(partIndex, i, currentNotes[i]);
+                spork ~playNoteWrapper(partIndex, currentNotes[i]);
             }
             //nextNotes[partIndex].broadcast();
         }
     }
 
-    fun void playNoteWrapper(int partIndex, int whichNote, ezNote theNote)
+    fun void playNoteWrapper(int partIndex, ezNote theNote)
     {
-        graphs[partIndex].noteOn(whichNote, theNote);
+        grab_subvoice(partIndex, theNote) => int which_subvoice;
+        graphs[partIndex].noteOn(which_subvoice, theNote);
 
         playhead/ms => float onset_ms;
         60000 / score.bpm => float ms_per_beat;
@@ -120,7 +157,49 @@ public class ScorePlayer
             tick => now;
         }
 
-        graphs[partIndex].noteOff(whichNote);
+        graphs[partIndex].noteOff(which_subvoice);
+        release_subvoice(partIndex, theNote);
+
+    }
+
+    // Gets the subvoice index of our note if it exists. Otherwise allocates a new subvoice index for the note and returns the index
+    fun int grab_subvoice(int partIndex, ezNote theNote)
+    {
+        if (midi_to_subvoice[partIndex][theNote.pitch] == -1)
+        {
+            get_free_subvoice(partIndex) => int free_subvoice_index;              // if the note doesn't already have a subvoice index, find one!
+            free_subvoice_index => midi_to_subvoice[partIndex][theNote.pitch];      // mapping the note to its subvoice index
+            <<< "subvoice_in_use sizes", subvoice_in_use[partIndex].size() >>>;
+            <<< "part,note:", partIndex, ",", theNote.pitch >>>;
+            1 => subvoice_in_use[partIndex][free_subvoice_index];                   // marking the new subvoice as in use
+        }
+        midi_to_subvoice[partIndex][theNote.pitch] => int subvoice_index;
+        return subvoice_index;
+    }
+
+    // Returns the lowest index of a free subvoice for a given part (or random index if there are no free subvoices).
+    fun int get_free_subvoice(int partIndex)
+    {
+        graphs[partIndex].n_voices => int n_voices;
+        int free_subvoice_index;                        
+        for (int i; i < n_voices; i++) {
+            if (subvoice_in_use[partIndex][i] == 0) {
+                return i;
+            }
+        }
+        // if none are free, return a random subvoice index
+        return Math.random2(0, n_voices);
+    }
+
+    fun void release_subvoice(int partIndex, ezNote theNote)
+    {
+        midi_to_subvoice[partIndex][theNote.pitch] => int subvoice_to_release;
+        if (subvoice_to_release == -1) return;      // if its already released, no need to release it again
+
+        // otherwise, release the subvoice
+        -1 => midi_to_subvoice[partIndex][theNote.pitch];
+        0 => subvoice_in_use[partIndex][subvoice_to_release];
+        
     }
 }
 
