@@ -16,7 +16,7 @@ public class ScorePlayer
 
 
     1 => float rate;
-    4::ms => dur tick;
+    1::ms => dur tick;
     dur tatum;
     dur playhead;
 
@@ -144,7 +144,7 @@ public class ScorePlayer
 
     fun void playNoteWrapper(int partIndex, ezNote theNote)
     {
-        grab_subvoice(partIndex, theNote) => int which_subvoice;
+        allocate_subvoice(partIndex, theNote) => int which_subvoice;
         graphs[partIndex].noteOn(which_subvoice, theNote);
 
         playhead/ms => float onset_ms;
@@ -159,25 +159,31 @@ public class ScorePlayer
 
         graphs[partIndex].noteOff(which_subvoice);
         release_subvoice(partIndex, theNote);
-
     }
 
-    // Gets the subvoice index of our note if it exists. Otherwise allocates a new subvoice index for the note and returns the index
-    fun int grab_subvoice(int partIndex, ezNote theNote)
+    // Gets the subvoice index of the note. If the note doesn't have a subvoice, allocates a new one and returns the index
+    fun int allocate_subvoice(int partIndex, ezNote theNote)
     {
-        if (midi_to_subvoice[partIndex][theNote.pitch] == -1)
-        {
-            get_free_subvoice(partIndex) => int free_subvoice_index;              // if the note doesn't already have a subvoice index, find one!
-            free_subvoice_index => midi_to_subvoice[partIndex][theNote.pitch];      // mapping the note to its subvoice index
-            <<< "subvoice_in_use sizes", subvoice_in_use[partIndex].size() >>>;
-            <<< "part,note:", partIndex, ",", theNote.pitch >>>;
+        midi_to_subvoice[partIndex][theNote.pitch] => int cur_subvoice_index;
+
+        // If the note doesn't have a subvoice, allocate one!
+        if (cur_subvoice_index == -1) {
+            get_free_subvoice(partIndex) => int free_subvoice_index;                // find a free subvoice for the note
+            if (free_subvoice_index == -1)      // if there are no free subvoices, free one at random
+            {
+                Math.random2(0, graphs[partIndex].n_voices) => free_subvoice_index;
+                // ezNote tempNote;
+                // release_subvoice()  // we might have to create subvoice_to_midi instead of subvoice_in_use...
+            }
+            free_subvoice_index => midi_to_subvoice[partIndex][theNote.pitch];      // map the note to it's new subvoice
             1 => subvoice_in_use[partIndex][free_subvoice_index];                   // marking the new subvoice as in use
+            return free_subvoice_index;
         }
-        midi_to_subvoice[partIndex][theNote.pitch] => int subvoice_index;
-        return subvoice_index;
+
+        return cur_subvoice_index;
     }
 
-    // Returns the lowest index of a free subvoice for a given part (or random index if there are no free subvoices).
+    // Helper for grab_subvoice(). Returns the lowest index of a free subvoice for a given part (or random index if there are no free subvoices).
     fun int get_free_subvoice(int partIndex)
     {
         graphs[partIndex].n_voices => int n_voices;
@@ -187,19 +193,19 @@ public class ScorePlayer
                 return i;
             }
         }
-        // if none are free, return a random subvoice index
-        return Math.random2(0, n_voices);
+        // if none are free return -1
+        return -1;
     }
 
+    // Releases the subvoice that was in use for a specific note
     fun void release_subvoice(int partIndex, ezNote theNote)
     {
         midi_to_subvoice[partIndex][theNote.pitch] => int subvoice_to_release;
-        if (subvoice_to_release == -1) return;      // if its already released, no need to release it again
+        if (subvoice_to_release == -1) return;      // if the subvoice is already released, no need to release it again
 
         // otherwise, release the subvoice
         -1 => midi_to_subvoice[partIndex][theNote.pitch];
         0 => subvoice_in_use[partIndex][subvoice_to_release];
-        
     }
 }
 
