@@ -2,7 +2,7 @@ Hid kb;
 HidMsg kb_msg;
 
 // which keyboard
-1 => int device;
+0 => int device;
 // get from command line
 if( me.args() ) me.arg(0) => Std.atoi => device;
 
@@ -41,10 +41,7 @@ spork ~ kb_listener();
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 @import {"ezScore.ck", "ScorePlayer.ck", "MyVoice.ck"}
 
-ezScore score;
-score.setTempo(128);
-score.setTimeSig(4, 4);
-score.importMIDI("sonata01-1.mid");
+ezScore score("sonata01-1.mid", 128, [4,4]);
 
 ScorePlayer sp(score);
 

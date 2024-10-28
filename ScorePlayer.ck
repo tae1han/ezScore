@@ -1,7 +1,5 @@
 @import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck", "ezScore.ck", "NoteEvent.ck", "ezVoice.ck"}
 
-
-
 public class ScorePlayer
 {
     ezScore score;
@@ -13,7 +11,6 @@ public class ScorePlayer
     // "subvoice" - an individual ugen in the overall voice array a subvoice
     int midi_to_subvoice[][];     // input is midi num, output is the index of which ugen is playing that note
     int subvoice_in_use[][];      // 0 if subvoice is not in use (free), 1 if subvoice is in use
-
 
     1 => float rate;
     1::ms => dur tick;
@@ -28,7 +25,7 @@ public class ScorePlayer
         <<<parts.size(), "parts processed">>>;
         for(int i; i < parts.size(); i++)
         {
-            cherr <= "part " <= i <= " has " <= parts[i].measures[0].notes.size() <= " notes" <= IO.newline();
+            cherr <= "part " <= i <= " has " <= parts[i].measures[0].notes.size() <= " notes, and max polyphony of " <= parts[i].maxPolyphony <= IO.newline();
         }
         new NoteEvent[parts.size()] @=> nextNotes;
         new ezVoice[parts.size()] @=> graphs;
@@ -98,6 +95,7 @@ public class ScorePlayer
 
     fun void setVoice(int part, ezVoice voice)
     {
+        parts[part].maxPolyphony => voice.n_voices;
         voice @=> graphs[part];
         
         // keep track of which subvoices are currently in use

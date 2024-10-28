@@ -8,6 +8,44 @@ public class ezScore
     4 => int time_sig_denominator;
     128 => float bpm;
 
+    fun ezScore(string filename)
+    {
+        if(filename.substring(filename.length() - 4,4) == ".mid")
+        {
+            importMIDI(filename);
+        }
+    }
+
+    fun ezScore(string filename, float newBpm)
+    {
+        newBpm => bpm;
+
+        if(filename.substring(filename.length() - 4,4) == ".mid")
+        {
+            importMIDI(filename);
+        }
+    }
+
+    fun ezScore(string filename, float newBpm, int timeSig[])
+    {
+        newBpm => bpm;
+
+        if(timeSig.size() != 2)
+        {
+            <<<"timeSig must be an array of size 2">>>;
+        }   
+        else
+        {
+            timeSig[0] => time_sig_numerator;
+            timeSig[1] => time_sig_denominator;
+        }
+
+        if(filename.substring(filename.length() - 4,4) == ".mid")
+        {
+            importMIDI(filename);
+        }
+    }
+
     fun void setTempo(float newBpm)
     {
         newBpm => bpm;
@@ -28,6 +66,7 @@ public class ezScore
 
         for (0 => int track; track < min.numTracks(); track++) {
             ezPart part;
+            0 => int currPolyCount;
 
             float note_on_time[128];    // stores the note onset times (ms) for Note-On events, indexed by pitch
             int note_index[128];       // stores the latest index a note was added to
@@ -69,6 +108,15 @@ public class ezScore
                     // <<<"# of notes in the measure: ", current_measure.notes.size()>>>;
                     // 3. Store the index in the measure for that pitch, so we can find it's associated note when we need to update duration
                     current_measure.notes.size() - 1 => note_index[pitch];
+
+                    // increase polyphony count by 1
+                    1 +=> currPolyCount;
+
+                    // update max polyphony
+                    if (part.maxPolyphony < currPolyCount)
+                    {
+                        currPolyCount => part.maxPolyphony;
+                    }
                 }
 
                 // Note Off
@@ -85,6 +133,9 @@ public class ezScore
                     // <<<"Current # of measures:", part.measures.size()>>>;
                     // <<<"# of notes in the measure (after noteoff): ", current_measure.notes.size()>>>;
                     note_duration_beats => current_measure.notes[note_index[pitch]].beats;
+
+                    // decrease polyphony count by 1;
+                    1 -=> currPolyCount;
                 }
             }
 
