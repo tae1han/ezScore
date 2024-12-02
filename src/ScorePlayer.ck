@@ -1,4 +1,4 @@
-@import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck", "ezScore.ck", "NoteEvent.ck", "ezVoice.ck"}
+@import {"ezNote.ck", "ezMeasure.ck", "ezPart.ck", "ezScore.ck", "NoteEvent.ck", "defaultVoice.ck", "ezVoice.ck"}
 
 public class ScorePlayer
 {
@@ -7,6 +7,13 @@ public class ScorePlayer
     NoteEvent nextNotes[];
 
     ezVoice graphs[];
+
+    // set up sound for preview
+    // defaultVoice previewGraphs[];
+    // Gain previewGain;
+    // previewGain.gain(0.0);
+    // previewGain => dac;
+    
 
     // "subvoice" - an individual ugen in the overall voice array a subvoice
     int subvoice_to_midi[][];       // -1 if subvoice is not in use (free), otherwise has the current midi pitch number it is being used for
@@ -22,17 +29,35 @@ public class ScorePlayer
         s @=> score;
         s.parts @=> parts;
         <<<parts.size(), "parts processed">>>;
+        // create note events for broadcasting (might not need this)
+        new NoteEvent[parts.size()] @=> nextNotes;
+
+        // create chugraphs
+        new ezVoice[parts.size()] @=> graphs;
+        // create default voices for preview playback
+        // new defaultVoice[parts.size()] @=> previewGraphs;
+
         for(int i; i < parts.size(); i++)
         {
+            // check contents of imported parts, assign polyphony to chugraph voices
             cherr <= "part " <= i <= " has " <= parts[i].measures[0].notes.size() <= " notes, and max polyphony of " <= parts[i].maxPolyphony <= IO.newline();
-        }
-        new NoteEvent[parts.size()] @=> nextNotes;
-        new ezVoice[parts.size()] @=> graphs;
-        spork~tickDriver();
+            parts[i].maxPolyphony => graphs[i].n_voices;
 
+            // set up preview voice polyphony and connect to gain
+            // parts[i].maxPolyphony => previewGraphs[i].n_voices;
+            // previewGraphs[i] => previewGain;
+        }
+        
         // keep track of which subvoices are currently in use
         new int[parts.size()][0] @=> subvoice_to_midi;
+
+        spork ~ tickDriver();
     }
+
+    // fun void start()
+    // {
+    //     spork~tickDriver();
+    // }
 
     fun void tickDriver()
     {
@@ -52,10 +77,9 @@ public class ScorePlayer
 
     fun void pos(dur timePosition)
     {
+        flushNotes();
         <<<"moving playhead to position (ms):", timePosition/ms>>>;
         timePosition => playhead;
-        flushNotes();
-        
     }
 
     fun void pos(float beatPosition)
@@ -63,7 +87,16 @@ public class ScorePlayer
         flushNotes();
         <<<"moving playhead to position (beats):", beatPosition>>>;
         60000 / score.bpm => float ms_per_beat;
+        ms_per_beat * (4 / score.time_sig_denominator) => ms_per_beat;
         (beatPosition * ms_per_beat)::ms => playhead;
+    }
+
+    fun void pos(int measures, float beats)
+    {
+        flushNotes();
+        <<<"moving playhead to position (measure, beats):", measures, beats>>>;
+        60000 / score.bpm => float ms_per_beat;
+        (measures * (ms_per_beat * score.time_sig_numerator * (4 / score.time_sig_denominator)) + beats * ms_per_beat)::ms => playhead;
     }
 
     fun void flushNotes()
@@ -187,5 +220,21 @@ public class ScorePlayer
         // <<< "part index:", partIndex, "| n_voices:", graphs[partIndex].n_voices, "| num subvoices", subvoice_to_midi[partIndex].size(), "| subvoice index:", subvoice_index >>>;
         -1 => subvoice_to_midi[partIndex][subvoice_index];
     }
+
+    fun void preview()
+    {
+        // new defaultVoice[parts.size()] @=> graphs;
+        for(int i; i < parts.size(); i++)
+        {
+            defaultVoice tempVoice;
+            setVoice(i, tempVoice);
+            parts[i].maxPolyphony => graphs[i].n_voices;
+            // graphs[i] => previewGain;
+        }
+        pos(0.0);
+        // previewGain.gain(1.0);
+        // spork ~ tickDriver();
+    }
+
 }
 

@@ -138,9 +138,13 @@ public class ezScore
                     1 -=> currPolyCount;
                 }
             }
+            // parts << part;
+            if(part.maxPolyphony > 0)
+            {
+                parts << part;
+                //<<< "part added!" >>>;
+            }
 
-            parts << part;
-            //<<< "part added!" >>>;
         }
     }
 }

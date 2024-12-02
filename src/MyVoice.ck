@@ -4,7 +4,7 @@ public class MyVoice extends ezVoice
 {
     // define sound chain
     8 => n_voices;
-    SinOsc oscs[n_voices]; 
+    TriOsc oscs[n_voices]; 
     ADSR envs[n_voices]; 
     Gain g => NRev rev => dac;
     g.gain(.1);
@@ -12,7 +12,7 @@ public class MyVoice extends ezVoice
     for(int i; i < n_voices; i++)
     {
         oscs[i] => envs[i] => g;
-        envs[i].set(4::ms, 7000::ms, 0.0, 200::ms);
+        envs[i].set(4::ms, 7000::ms, 0.0, 150::ms);
     }
 
     fun void noteOn(int which, ezNote theNote)
